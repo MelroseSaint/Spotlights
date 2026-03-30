@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Share2, Play, MapPin, BadgeCheck, Zap, MoreVertical } from "lucide-react";
+import { Heart, MessageCircle, Share2, Play, MapPin, BadgeCheck, Zap, MoreVertical, Music } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -157,12 +157,29 @@ export default function ContentCard({ content, showPromotionBadge = true }: Cont
               <video
                 src={mediaUrl}
                 muted
-                autoPlay
                 loop
                 playsInline
+                controls
                 className={`w-full h-full object-cover transition-all ${isPlaying ? "scale-105" : ""}`}
-                onClick={() => setIsPlaying(!isPlaying)}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
               />
+            ) : content.contentType === "audio" && mediaUrl ? (
+              <div className="w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex flex-col items-center justify-center p-4">
+                <div className="w-20 h-20 rounded-full bg-amber-500/20 flex items-center justify-center mb-4">
+                  <Music className="w-10 h-10 text-amber-500" />
+                </div>
+                <audio
+                  src={mediaUrl}
+                  controls
+                  className="w-full max-w-xs"
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                />
+                {content.duration && (
+                  <span className="text-zinc-500 text-sm mt-2">{formatDuration(content.duration)}</span>
+                )}
+              </div>
             ) : thumbnailUrl || mediaUrl ? (
               <img
                 src={thumbnailUrl || mediaUrl || ""}
@@ -171,28 +188,19 @@ export default function ContentCard({ content, showPromotionBadge = true }: Cont
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center">
-                {content.contentType === "audio" ? (
-                  <div className="text-center">
-                    <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-2">
-                      <Play className="w-8 h-8 text-amber-500" />
-                    </div>
-                    {content.duration && (
-                      <span className="text-zinc-500 text-sm">{formatDuration(content.duration)}</span>
-                    )}
-                  </div>
-                ) : (
-                  <Play className="w-12 h-12 text-zinc-600" />
-                )}
+                <Play className="w-12 h-12 text-zinc-600" />
               </div>
             )}
-            <button
-              onClick={handlePlay}
-              className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover/play:opacity-100 transition-opacity"
-            >
-              <div className="w-14 h-14 rounded-full bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                <Play className="w-6 h-6 text-black ml-1" fill="currentColor" />
-              </div>
-            </button>
+            {!isPlaying && (
+              <button
+                onClick={handlePlay}
+                className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover/play:opacity-100 transition-opacity"
+              >
+                <div className="w-14 h-14 rounded-full bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                  <Play className="w-6 h-6 text-black ml-1" fill="currentColor" />
+                </div>
+              </button>
+            )}
           </div>
 
           <div className="mb-3">
