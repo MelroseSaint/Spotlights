@@ -47,6 +47,10 @@ interface ContentCardProps {
 }
 
 export default function ContentCard({ content, showPromotionBadge = true }: ContentCardProps) {
+  if (!content.owner?._id) {
+    return null;
+  }
+
   const { user } = useUser();
   const likeContent = useLikeContent();
   const unlikeContent = useUnlikeContent();

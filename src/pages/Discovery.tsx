@@ -54,7 +54,7 @@ export default function Discovery() {
   const filteredTrending = trendingContent?.filter(filterContent) || [];
 
   const freshFaceUsers = freshFaceFeed?.reduce((acc: any[], content: any) => {
-    if (!acc.find((u: any) => u._id === content.owner._id)) {
+    if (content.owner && !acc.find((u: any) => u._id === content.owner._id)) {
       acc.push(content.owner);
     }
     return acc;
