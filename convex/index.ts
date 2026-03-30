@@ -17,3 +17,5 @@ export * from "./backend/feedback";
 export * from "./backend/userEvents";
 export * from "./backend/messages";
 export * from "./backend/playlists";
+export * from "./backend/moderation";
+export * from "./backend/hottestArtists";

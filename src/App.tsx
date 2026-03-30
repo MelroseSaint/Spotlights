@@ -14,6 +14,10 @@ import SignUp from "@/pages/SignUp";
 import Events from "@/pages/Events";
 import Settings from "@/pages/Settings";
 import Messages from "@/pages/Messages";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
+import About from "@/pages/About";
+import Feedback from "@/pages/Feedback";
 import NotFound from "@/pages/NotFound";
 
 function App() {
@@ -36,6 +40,10 @@ function App() {
             <Route path="messages" element={<Messages />} />
             <Route path="messages/:conversationId" element={<Messages />} />
             <Route path="signup" element={<SignUp />} />
+            <Route path="terms" element={<Terms />} />
+            <Route path="privacy" element={<Privacy />} />
+            <Route path="about" element={<About />} />
+            <Route path="feedback" element={<Feedback />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

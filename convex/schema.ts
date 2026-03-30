@@ -373,4 +373,50 @@ export default defineSchema({
   })
     .index("by_owner", ["ownerId"])
     .index("by_isPublic", ["isPublic"]),
+
+  hottestArtists: defineTable({
+    artistId: v.id("users"),
+    position: v.number(),
+    createdAt: v.number(),
+    createdBy: v.id("users"),
+    isActive: v.boolean(),
+  })
+    .index("by_artist", ["artistId"])
+    .index("by_position", ["position"])
+    .index("by_isActive", ["isActive"]),
+
+  moderationLogs: defineTable({
+    userId: v.id("users"),
+    contentId: v.optional(v.id("artistContent")),
+    contentType: v.string(),
+    rawContent: v.string(),
+    flagged: v.boolean(),
+    categories: v.string(),
+    scores: v.string(),
+    actionTaken: v.string(),
+    severity: v.string(),
+    reviewedBy: v.optional(v.id("users")),
+    reviewedAt: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_content", ["contentId"])
+    .index("by_flagged", ["flagged"])
+    .index("by_actionTaken", ["actionTaken"])
+    .index("by_createdAt", ["createdAt"]),
+
+  moderationStrikes: defineTable({
+    userId: v.id("users"),
+    strikeType: v.string(),
+    reason: v.string(),
+    contentId: v.optional(v.id("artistContent")),
+    issuedBy: v.id("users"),
+    expiresAt: v.optional(v.number()),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_isActive", ["isActive"])
+    .index("by_createdAt", ["createdAt"]),
 });

@@ -20,7 +20,10 @@ import {
   Crown,
   Zap,
   UserCheck,
-  UserX
+  UserX,
+  Plus,
+  Flame,
+  AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useUser, useAdmin, useVerifyAdminAccess, useAdminDashboard, useApproveContent, useRejectContent, useUpdateUserRole, useSuspendUser, useDeleteUser } from "@/hooks/api";
+import { useUser, useAdmin, useVerifyAdminAccess, useAdminDashboard, useApproveContent, useRejectContent, useUpdateUserRole, useSuspendUser, useDeleteUser, useModerationLogs, useHottestArtists, useAllHottestArtistsAdmin, useAddHottestArtist, useRemoveHottestArtist, useClearHottestArtists } from "@/hooks/api";
 import { toast } from "sonner";
 import { Id } from "convex/_generated/dataModel";
 import { formatTimestamp } from "@/lib/utils";
@@ -53,6 +56,14 @@ export default function Admin() {
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [newRole, setNewRole] = useState<string>("");
+  const [hottestSearch, setHottestSearch] = useState("");
+  const [showAddHottest, setShowAddHottest] = useState(false);
+  
+  const moderationLogs = useModerationLogs(100, true);
+  const hottestArtistsAdmin = useAllHottestArtistsAdmin();
+  const addHottestArtist = useAddHottestArtist();
+  const removeHottestArtist = useRemoveHottestArtist();
+  const clearHottestArtists = useClearHottestArtists();
 
   const isAdmin = (adminAccess?.isAdmin ?? false) || user?.email === "monroeodoses@gmail.com" || user?.email === "monroedoses@gmail.com";
   const isLoadingAccess = adminAccess === undefined;
@@ -216,9 +227,91 @@ export default function Admin() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="rounded-xl border-zinc-700">
+          <Button 
+            variant="outline" 
+            className="rounded-xl border-zinc-700"
+            onClick={() => {
+              if (!dashboard || !allUsers || !moderationQueue) return;
+              
+              const report = {
+                generatedAt: new Date().toISOString(),
+                summary: {
+                  totalUsers: dashboard.stats.totalUsers,
+                  totalContent: dashboard.stats.totalContent,
+                  activeContent: dashboard.stats.activeContent,
+                  pendingModeration: dashboard.stats.pendingModeration,
+                  activePromotions: dashboard.stats.activePromotions,
+                  tierBreakdown: dashboard.tierBreakdown,
+                  roleBreakdown: dashboard.roleBreakdown,
+                },
+                users: allUsers.map(u => ({
+                  id: u._id,
+                  name: u.name,
+                  email: u.email,
+                  role: u.role,
+                  tier: u.tier,
+                  followers: u.followers,
+                  postsCount: u.postsCount,
+                  isVerified: u.isVerified,
+                  isSuspended: u.isSuspended,
+                  createdAt: new Date(u.createdAt || 0).toISOString(),
+                })),
+                moderationQueue: moderationQueue.map(item => ({
+                  id: item._id,
+                  contentTitle: item.content?.title,
+                  contentDescription: item.content?.description,
+                  ownerName: item.owner?.name,
+                  ownerEmail: item.owner?.email,
+                  status: item.status,
+                  createdAt: new Date(item.createdAt).toISOString(),
+                })),
+              };
+              
+              const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `admin-report-${new Date().toISOString().split("T")[0]}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+              toast.success("Report exported successfully!");
+            }}
+          >
             <BarChart3 className="w-4 h-4 mr-2" />
             Export Reports
+          </Button>
+          <Button 
+            variant="outline" 
+            className="rounded-xl border-zinc-700"
+            onClick={() => {
+              if (!allUsers) return;
+              
+              const headers = ["Name", "Email", "Role", "Tier", "Followers", "Posts", "Verified", "Suspended", "Created"];
+              const rows = allUsers.map(u => [
+                u.name,
+                u.email,
+                u.role || "user",
+                u.tier || "standard",
+                u.followers || 0,
+                u.postsCount || 0,
+                u.isVerified ? "Yes" : "No",
+                u.isSuspended ? "Yes" : "No",
+                new Date(u.createdAt || 0).toLocaleDateString(),
+              ]);
+              
+              const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(",")).join("\n");
+              const blob = new Blob([csv], { type: "text/csv" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `users-export-${new Date().toISOString().split("T")[0]}.csv`;
+              a.click();
+              URL.revokeObjectURL(url);
+              toast.success("Users CSV exported!");
+            }}
+          >
+            <Users className="w-4 h-4 mr-2" />
+            Export Users CSV
           </Button>
         </div>
       </div>
@@ -300,15 +393,15 @@ export default function Admin() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-zinc-900/50 rounded-2xl p-1">
+        <TabsList className="grid w-full grid-cols-5 bg-zinc-900/50 rounded-2xl p-1">
           <TabsTrigger 
             value="moderation" 
             className="rounded-xl data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold"
           >
             <AlertTriangle className="w-4 h-4 mr-2" />
-            Moderation
+            Mod
             {moderationQueue && moderationQueue.length > 0 && (
-              <Badge className="ml-2 bg-red-500 text-white rounded-full text-xs">
+              <Badge className="ml-1 bg-red-500 text-white rounded-full text-xs">
                 {moderationQueue.length}
               </Badge>
             )}
@@ -326,6 +419,20 @@ export default function Admin() {
           >
             <Music className="w-4 h-4 mr-2" />
             Content
+          </TabsTrigger>
+          <TabsTrigger 
+            value="hottest" 
+            className="rounded-xl data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold"
+          >
+            <Flame className="w-4 h-4 mr-2" />
+            Hottest
+          </TabsTrigger>
+          <TabsTrigger 
+            value="modlogs" 
+            className="rounded-xl data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold"
+          >
+            <AlertCircle className="w-4 h-4 mr-2" />
+            Logs
           </TabsTrigger>
         </TabsList>
 
@@ -566,6 +673,190 @@ export default function Admin() {
                 <h3 className="text-xl font-bold text-white mb-2">Detailed Content View</h3>
                 <p className="text-zinc-400">Browse and manage all content from the moderation queue above.</p>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="hottest" className="mt-8">
+          <Card className="bg-zinc-900/50 border-zinc-800 rounded-3xl">
+            <CardHeader className="p-6">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Flame className="w-6 h-6 text-amber-500" />
+                  <span className="text-xl font-bold text-white">Hottest in the City</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setShowAddHottest(!showAddHottest)}
+                    className="bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-xl"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Artist
+                  </Button>
+                  {hottestArtistsAdmin && hottestArtistsAdmin.length > 0 && (
+                    <Button
+                      onClick={async () => {
+                        if (!user) return;
+                        try {
+                          await clearHottestArtists({ clearedBy: user._id });
+                          toast.success("Hottest list cleared");
+                        } catch (err: any) {
+                          toast.error(err.message);
+                        }
+                      }}
+                      variant="destructive"
+                      className="rounded-xl"
+                    >
+                      Clear All
+                    </Button>
+                  )}
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+              {showAddHottest && (
+                <div className="mb-6 p-4 bg-zinc-800/50 rounded-xl">
+                  <p className="text-zinc-400 text-sm mb-3">Select an artist from the Users tab, or search below:</p>
+                  <div className="flex gap-3">
+                    <Input
+                      placeholder="Search artists..."
+                      value={hottestSearch}
+                      onChange={(e) => setHottestSearch(e.target.value)}
+                      className="bg-zinc-900/50 border-zinc-700 text-white rounded-xl"
+                    />
+                    {allUsers && (
+                      <Select onValueChange={async (artistId) => {
+                        if (!user || !artistId) return;
+                        try {
+                          await addHottestArtist({ artistId: artistId as Id<"users">, addedBy: user._id });
+                          toast.success("Artist added to Hottest!");
+                          setShowAddHottest(false);
+                          setHottestSearch("");
+                        } catch (err: any) {
+                          toast.error(err.message);
+                        }
+                      }}>
+                        <SelectTrigger className="w-[200px] bg-zinc-900/50 border-zinc-700 text-white rounded-xl">
+                          <SelectValue placeholder="Select artist" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-900 border-zinc-800">
+                          {allUsers
+                            .filter(u => u.name.toLowerCase().includes(hottestSearch.toLowerCase()))
+                            .filter(u => !hottestArtistsAdmin?.some(h => h.artistId === u._id))
+                            .slice(0, 10)
+                            .map(u => (
+                              <SelectItem key={u._id} value={u._id} className="text-white">
+                                {u.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    }
+                  </div>
+                </div>
+              )}
+              
+              {hottestArtistsAdmin && hottestArtistsAdmin.length > 0 ? (
+                <div className="space-y-4">
+                  {hottestArtistsAdmin.map((item: any, idx: number) => (
+                    <div key={item._id} className="flex items-center gap-4 p-4 bg-zinc-800/50 rounded-xl">
+                      <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold">
+                        #{idx + 1}
+                      </div>
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={item.artist?.avatarUrl} />
+                        <AvatarFallback className="bg-zinc-700 text-white">
+                          {item.artist?.name?.charAt(0) || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-bold text-white">{item.artist?.name}</p>
+                        <p className="text-zinc-500 text-sm">{item.artist?.email}</p>
+                      </div>
+                      <Button
+                        onClick={async () => {
+                          if (!user) return;
+                          try {
+                            await removeHottestArtist({ artistId: item.artistId, removedBy: user._id });
+                            toast.success("Artist removed from Hottest");
+                          } catch (err: any) {
+                            toast.error(err.message);
+                          }
+                        }}
+                        variant="ghost"
+                        className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Flame className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-white mb-2">No Hottest Artists</h3>
+                  <p className="text-zinc-400">Add artists to feature them in the Hottest section.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="modlogs" className="mt-8">
+          <Card className="bg-zinc-900/50 border-zinc-800 rounded-3xl">
+            <CardHeader className="p-6">
+              <CardTitle className="flex items-center gap-3">
+                <AlertCircle className="w-6 h-6 text-amber-500" />
+                <span className="text-xl font-bold text-white">Moderation Logs</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+              {moderationLogs && moderationLogs.length > 0 ? (
+                <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                  {moderationLogs.map((log: any) => (
+                    <div key={log._id} className="p-4 bg-zinc-800/50 rounded-xl border border-zinc-700/50">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          {log.flagged && (
+                            <Badge variant="destructive" className="rounded-full">
+                              Flagged
+                            </Badge>
+                          )}
+                          <Badge className={`rounded-full ${
+                            log.actionTaken === "block" ? "bg-red-500/20 text-red-500" :
+                            log.actionTaken === "warn" ? "bg-amber-500/20 text-amber-500" :
+                            "bg-green-500/20 text-green-500"
+                          }`}>
+                            {log.actionTaken}
+                          </Badge>
+                          <Badge variant="outline" className="border-zinc-600 text-zinc-400 rounded-full">
+                            {log.contentType}
+                          </Badge>
+                        </div>
+                        <span className="text-zinc-500 text-sm">
+                          {formatTimestamp(log.createdAt)}
+                        </span>
+                      </div>
+                      <p className="text-white text-sm mb-2 line-clamp-2">{log.rawContent}</p>
+                      {log.categories && log.categories !== "{}" && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {JSON.parse(log.categories || "{}").map((cat: string, i: number) => (
+                            <span key={i} className="px-2 py-0.5 bg-zinc-700/50 text-zinc-400 text-xs rounded">
+                              {cat}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <AlertCircle className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-white mb-2">No Moderation Logs</h3>
+                  <p className="text-zinc-400">Flagged content will appear here.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

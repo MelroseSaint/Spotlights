@@ -14,3 +14,5 @@ export * from "./useUserEvents";
 export * from "./useStorage";
 export * from "./useMessages";
 export * from "./usePlaylists";
+export * from "./useModeration";
+export * from "./useHottestArtists";

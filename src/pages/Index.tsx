@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ContentCard from "@/components/ContentCard";
+import HottestSection from "@/components/HottestSection";
 import { useSpotlightFeed, useTrendingContent, useFreshFaceFeed } from "@/hooks/api";
 
 const useScrollReveal = () => {
@@ -142,6 +143,9 @@ export default function Index() {
            </div>
         </div>
       </header>
+
+      {/* Hottest Section */}
+      <HottestSection />
 
       {/* Spotlight Feed */}
       <main className="container mx-auto px-6 py-24 relative z-10">
