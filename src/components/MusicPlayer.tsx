@@ -313,7 +313,19 @@ export default function MusicPlayer({ initialQueue = [] }: MusicPlayerProps) {
               className="text-zinc-400 hover:text-white"
               onClick={() => setIsExpanded(!isExpanded)}
             >
-              <ChevronUp className="w-5 h-5" />
+              {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-zinc-400 hover:text-red-500"
+              onClick={() => {
+                setCurrentTrack(null);
+                setIsPlaying(false);
+                setQueue([]);
+              }}
+            >
+              <X className="w-5 h-5" />
             </Button>
             {volume > 0 && !isMuted ? (
               <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white" onClick={() => setIsMuted(true)}>

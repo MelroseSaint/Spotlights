@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useUser, useLikeContent, useUnlikeContent, useShareContent, useFileUrl } from "@/hooks/api";
+import { useMusicPlayer } from "@/context/MusicPlayerContext";
 import { toast } from "sonner";
 import { Id } from "convex/_generated/dataModel";
 import { formatTimestamp, formatDuration, isExpired } from "@/lib/utils";
@@ -55,6 +56,7 @@ export default function ContentCard({ content, showPromotionBadge = true }: Cont
   const likeContent = useLikeContent();
   const unlikeContent = useUnlikeContent();
   const shareContent = useShareContent();
+  const { playTrack, currentTrack } = useMusicPlayer();
   const [isLiked, setIsLiked] = useState(false);
   const [isShared, setIsShared] = useState(false);
   const [localLikes, setLocalLikes] = useState(content.likes);
@@ -109,7 +111,23 @@ export default function ContentCard({ content, showPromotionBadge = true }: Cont
   const handlePlay = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsPlaying(!isPlaying);
+    
+    if (content.contentType === "audio" || content.contentType === "video") {
+      playTrack({
+        _id: content._id,
+        title: content.title,
+        artistName: content.artistName,
+        mediaUrl: content.mediaUrl,
+        thumbnailUrl: content.thumbnailUrl,
+        contentType: content.contentType,
+        duration: content.duration,
+        ownerId: content.owner._id,
+        ownerName: content.owner.name,
+        ownerAvatar: content.owner.avatarUrl,
+      });
+    } else {
+      setIsPlaying(!isPlaying);
+    }
   };
 
   return (
