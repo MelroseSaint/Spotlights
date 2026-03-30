@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, LogOut, Trash2, Shield, Zap, Crown, User, Bell, CreditCard, AlertTriangle, Camera, Upload, X } from "lucide-react";
-import { useUser } from "@/hooks/api";
+import { useUser, useFileUrl } from "@/hooks/api";
 import { toast } from "sonner";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -32,6 +32,8 @@ export default function Settings() {
   const [website, setWebsite] = useState(user?.website || "");
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || "");
   const [bannerUrl, setBannerUrl] = useState(user?.bannerUrl || "");
+  const avatarImageUrl = useFileUrl(avatarUrl || user?.avatarUrl || null);
+  const bannerImageUrl = useFileUrl(bannerUrl || user?.bannerUrl || null);
 
   if (!isAuthenticated && !isLoading) {
     navigate("/signup");
@@ -71,8 +73,8 @@ export default function Settings() {
         avatarUrl: storageId,
       });
       toast.success("Profile picture updated!");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to upload image");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to upload image");
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -111,8 +113,8 @@ export default function Settings() {
         bannerUrl: storageId,
       });
       toast.success("Banner updated!");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to upload image");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to upload image");
     } finally {
       setIsUploadingBanner(false);
     }
@@ -134,8 +136,8 @@ export default function Settings() {
         bannerUrl: bannerUrl || user.bannerUrl || undefined,
       });
       toast.success("Profile updated!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update profile");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update profile");
     } finally {
       setIsSaving(false);
     }
@@ -241,7 +243,7 @@ export default function Settings() {
                       <div 
                         className="w-full h-32 rounded-xl bg-zinc-800 border border-zinc-700 overflow-hidden relative group"
                         style={{
-                          backgroundImage: bannerUrl ? `url(${bannerUrl})` : undefined,
+                          backgroundImage: bannerImageUrl ? `url(${bannerImageUrl})` : undefined,
                           backgroundSize: "cover",
                           backgroundPosition: "center"
                         }}
@@ -277,12 +279,12 @@ export default function Settings() {
                         <div 
                           className="w-24 h-24 rounded-full bg-zinc-800 border-2 border-zinc-700 overflow-hidden"
                           style={{
-                            backgroundImage: avatarUrl || user?.avatarUrl ? `url(${avatarUrl || user?.avatarUrl})` : undefined,
+                            backgroundImage: avatarImageUrl ? `url(${avatarImageUrl})` : undefined,
                             backgroundSize: "cover",
                             backgroundPosition: "center"
                           }}
                         >
-                          {!avatarUrl && !user?.avatarUrl && (
+                          {!avatarImageUrl && (
                             <div className="w-full h-full flex items-center justify-center">
                               <User className="w-10 h-10 text-zinc-600" />
                             </div>

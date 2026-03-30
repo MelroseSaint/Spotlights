@@ -5,32 +5,13 @@ import { Link } from "react-router-dom";
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, ListMusic, Heart, X, ChevronUp, ChevronDown, Shuffle, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { useMusicPlayer } from "@/context/MusicPlayerContext";
 import { useFileUrl } from "@/hooks/api";
 import { Id } from "convex/_generated/dataModel";
 
-interface Track {
-  _id: Id<"artistContent">;
-  title: string;
-  artistName: string;
-  mediaUrl: string;
-  thumbnailUrl?: string;
-  contentType: string;
-  duration?: number;
-  ownerId: Id<"users">;
-  ownerName?: string;
-  ownerAvatar?: string;
-}
-
-interface MusicPlayerProps {
-  initialQueue?: Track[];
-}
-
-export default function MusicPlayer({ initialQueue = [] }: MusicPlayerProps) {
-  const [queue, setQueue] = useState<Track[]>(initialQueue);
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+export default function MusicPlayer() {
+  const { currentTrack, queue, isPlaying, playTrack, closePlayer } = useMusicPlayer();
+  
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(80);
@@ -100,7 +81,6 @@ export default function MusicPlayer({ initialQueue = [] }: MusicPlayerProps) {
     } else {
       audioRef.current.play().catch(console.error);
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleSeek = (value: number[]) => {
@@ -129,8 +109,7 @@ export default function MusicPlayer({ initialQueue = [] }: MusicPlayerProps) {
       }
     }
     
-    setCurrentTrack(queue[nextIndex]);
-    setIsPlaying(true);
+    playTrack(queue[nextIndex], queue);
   };
 
   const handlePrev = () => {
@@ -148,24 +127,7 @@ export default function MusicPlayer({ initialQueue = [] }: MusicPlayerProps) {
       }
     }
     
-    setCurrentTrack(queue[prevIndex]);
-    setIsPlaying(true);
-  };
-
-  const playTrack = (track: Track) => {
-    setCurrentTrack(track);
-    setIsPlaying(true);
-  };
-
-  const addToQueue = (track: Track) => {
-    setQueue(prev => {
-      if (prev.find(t => t._id === track._id)) return prev;
-      return [...prev, track];
-    });
-  };
-
-  const removeFromQueue = (trackId: Id<"artistContent">) => {
-    setQueue(prev => prev.filter(t => t._id !== trackId));
+    playTrack(queue[prevIndex], queue);
   };
 
   const formatTime = (seconds: number) => {
@@ -174,7 +136,7 @@ export default function MusicPlayer({ initialQueue = [] }: MusicPlayerProps) {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  if (!currentTrack && queue.length === 0) return null;
+  if (!currentTrack) return null;
 
   return (
     <>
@@ -205,18 +167,10 @@ export default function MusicPlayer({ initialQueue = [] }: MusicPlayerProps) {
                         <img src={track.thumbnailUrl} alt="" className="w-full h-full object-cover" />
                       )}
                     </div>
-                    <div className="flex-1 min-w-0" onClick={() => playTrack(track)}>
+                    <div className="flex-1 min-w-0" onClick={() => playTrack(track, queue)}>
                       <p className="font-medium text-white truncate cursor-pointer hover:text-amber-500">{track.title}</p>
                       <p className="text-sm text-zinc-500 truncate">{track.artistName}</p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-zinc-400 hover:text-red-500"
-                      onClick={() => removeFromQueue(track._id)}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
                   </div>
                 ))}
               </div>
@@ -319,11 +273,7 @@ export default function MusicPlayer({ initialQueue = [] }: MusicPlayerProps) {
               variant="ghost"
               size="icon"
               className="text-zinc-400 hover:text-red-500"
-              onClick={() => {
-                setCurrentTrack(null);
-                setIsPlaying(false);
-                setQueue([]);
-              }}
+              onClick={closePlayer}
             >
               <X className="w-5 h-5" />
             </Button>
@@ -361,7 +311,7 @@ export default function MusicPlayer({ initialQueue = [] }: MusicPlayerProps) {
               <div
                 key={track._id}
                 className="flex items-center gap-2 p-2 hover:bg-zinc-800/50 cursor-pointer"
-                onClick={() => playTrack(track)}
+                onClick={() => playTrack(track, queue)}
               >
                 <div className="w-10 h-10 rounded bg-zinc-800 overflow-hidden flex-shrink-0">
                   {track.thumbnailUrl && (
@@ -380,5 +330,3 @@ export default function MusicPlayer({ initialQueue = [] }: MusicPlayerProps) {
     </>
   );
 }
-
-export { type Track };

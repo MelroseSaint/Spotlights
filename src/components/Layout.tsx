@@ -16,7 +16,7 @@ const Layout = () => {
         <Outlet />
       </main>
       {currentTrack && queue.length > 0 && (
-        <MusicPlayer initialQueue={queue} />
+        <MusicPlayer />
       )}
       <Footer />
     </div>

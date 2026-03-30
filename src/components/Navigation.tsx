@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { useUser, useUnreadCount } from "@/hooks/api";
+import { useUser, useUnreadCount, useFileUrl } from "@/hooks/api";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
@@ -49,6 +49,19 @@ const userNavItems = [
 const isMonroeEmail = (email?: string) => {
   return email === "monroedoses@gmail.com";
 };
+
+function UserAvatar({ user }: { user: any }) {
+  const avatarUrl = useFileUrl(user.avatarUrl);
+  return (
+    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-purple-500 overflow-hidden flex items-center justify-center">
+      {user.avatarUrl ? (
+        <img src={avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+      ) : (
+        <span className="text-white font-bold">{user.name?.charAt(0) || "?"}</span>
+      )}
+    </div>
+  );
+}
 
 export default function Navigation() {
   const location = useLocation();
@@ -157,13 +170,7 @@ export default function Navigation() {
               to={`/profile/${user._id}`}
               className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-zinc-800/50 transition-colors group"
             >
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-purple-500 overflow-hidden flex items-center justify-center">
-                {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-white font-bold">{user.name?.charAt(0) || "?"}</span>
-                )}
-              </div>
+              <UserAvatar user={user} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-white truncate">{user.name}</p>
                 <div className="flex items-center gap-1">

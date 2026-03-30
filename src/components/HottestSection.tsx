@@ -4,7 +4,23 @@ import { Link } from "react-router-dom";
 import { Crown, MapPin, BadgeCheck } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { useHottestArtists } from "@/hooks/api";
+import { useHottestArtists, useFileUrl } from "@/hooks/api";
+
+function ArtistAvatar({ artist }: { artist: any }) {
+  const avatarUrl = useFileUrl(artist?.avatarUrl);
+  return (
+    <Avatar className="w-full h-full rounded-none">
+      <AvatarImage
+        src={avatarUrl}
+        alt={artist?.name}
+        className="object-cover"
+      />
+      <AvatarFallback className="w-full h-full bg-gradient-to-br from-amber-500 to-orange-600 text-white text-4xl font-bold flex items-center justify-center">
+        {artist?.name?.charAt(0) || "?"}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
 
 export default function HottestSection() {
   const hottestArtists = useHottestArtists(10);
@@ -34,16 +50,7 @@ export default function HottestSection() {
                       <span className="text-white font-black text-sm">#{index + 1}</span>
                     </div>
                     <div className="aspect-square bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center overflow-hidden">
-                      <Avatar className="w-full h-full rounded-none">
-                        <AvatarImage
-                          src={item.artist?.avatarUrl}
-                          alt={item.artist?.name}
-                          className="object-cover"
-                        />
-                        <AvatarFallback className="w-full h-full bg-gradient-to-br from-amber-500 to-orange-600 text-white text-4xl font-bold flex items-center justify-center">
-                          {item.artist?.name?.charAt(0) || "?"}
-                        </AvatarFallback>
-                      </Avatar>
+                      <ArtistAvatar artist={item.artist} />
                     </div>
                   </div>
                   <CardContent className="p-3">

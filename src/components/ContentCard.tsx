@@ -48,15 +48,11 @@ interface ContentCardProps {
 }
 
 export default function ContentCard({ content, showPromotionBadge = true }: ContentCardProps) {
-  if (!content.owner?._id) {
-    return null;
-  }
-
   const { user } = useUser();
   const likeContent = useLikeContent();
   const unlikeContent = useUnlikeContent();
   const shareContent = useShareContent();
-  const { playTrack, currentTrack } = useMusicPlayer();
+  const { playTrack } = useMusicPlayer();
   const [isLiked, setIsLiked] = useState(false);
   const [isShared, setIsShared] = useState(false);
   const [localLikes, setLocalLikes] = useState(content.likes);
@@ -65,6 +61,11 @@ export default function ContentCard({ content, showPromotionBadge = true }: Cont
 
   const mediaUrl = useFileUrl(content.mediaUrl);
   const thumbnailUrl = useFileUrl(content.thumbnailUrl);
+  const ownerAvatarUrl = useFileUrl(content.owner.avatarUrl);
+
+  if (!content.owner?._id) {
+    return null;
+  }
 
   const isPromoted = content.isPromoted || (content.promotionEndDate && !isExpired(content.promotionEndDate));
 
@@ -143,7 +144,7 @@ export default function ContentCard({ content, showPromotionBadge = true }: Cont
         <div className="p-4">
           <div className="flex items-start gap-3 mb-4">
             <Avatar className="w-12 h-12 rounded-full overflow-hidden">
-              <AvatarImage src={content.owner.avatarUrl || ""} alt={content.owner.name} />
+              <AvatarImage src={ownerAvatarUrl || ""} alt={content.owner.name} />
               <AvatarFallback className="bg-zinc-800 text-zinc-400">
                 {content.owner.name?.charAt(0) || "?"}
               </AvatarFallback>
@@ -171,53 +172,35 @@ export default function ContentCard({ content, showPromotionBadge = true }: Cont
           </div>
 
           <div className="relative rounded-xl overflow-hidden mb-4 bg-zinc-800 aspect-video flex items-center justify-center group/play">
-            {content.contentType === "video" && mediaUrl ? (
-              <video
-                src={mediaUrl}
-                muted
-                loop
-                playsInline
-                controls
-                className={`w-full h-full object-cover transition-all ${isPlaying ? "scale-105" : ""}`}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-              />
-            ) : content.contentType === "audio" && mediaUrl ? (
-              <div className="w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex flex-col items-center justify-center p-4">
-                <div className="w-20 h-20 rounded-full bg-amber-500/20 flex items-center justify-center mb-4">
-                  <Music className="w-10 h-10 text-amber-500" />
-                </div>
-                <audio
-                  src={mediaUrl}
-                  controls
-                  className="w-full max-w-xs"
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                />
-                {content.duration && (
-                  <span className="text-zinc-500 text-sm mt-2">{formatDuration(content.duration)}</span>
-                )}
-              </div>
-            ) : thumbnailUrl || mediaUrl ? (
+            {thumbnailUrl || mediaUrl ? (
               <img
                 src={thumbnailUrl || mediaUrl || ""}
                 alt={content.title}
-                className={`w-full h-full object-cover transition-all ${isPlaying ? "scale-105" : ""}`}
+                className="w-full h-full object-cover"
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center">
-                <Play className="w-12 h-12 text-zinc-600" />
+                {content.contentType === "audio" ? (
+                  <div className="w-20 h-20 rounded-full bg-amber-500/20 flex items-center justify-center">
+                    <Music className="w-10 h-10 text-amber-500" />
+                  </div>
+                ) : (
+                  <Play className="w-12 h-12 text-zinc-600" />
+                )}
               </div>
             )}
-            {!isPlaying && (
-              <button
-                onClick={handlePlay}
-                className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover/play:opacity-100 transition-opacity"
-              >
-                <div className="w-14 h-14 rounded-full bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                  <Play className="w-6 h-6 text-black ml-1" fill="currentColor" />
-                </div>
-              </button>
+            <button
+              onClick={handlePlay}
+              className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover/play:opacity-100 transition-opacity"
+            >
+              <div className="w-14 h-14 rounded-full bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                <Play className="w-6 h-6 text-black ml-1" fill="currentColor" />
+              </div>
+            </button>
+            {content.duration && (
+              <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/60 rounded text-xs text-white">
+                {formatDuration(content.duration)}
+              </div>
             )}
           </div>
 

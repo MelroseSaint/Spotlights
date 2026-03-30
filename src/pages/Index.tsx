@@ -202,27 +202,6 @@ export default function Index() {
           </div>
         )}
 
-        {/* Featured Interview / Story */}
-        <div className="mt-40 bg-zinc-900/40 border border-white/5 rounded-[3rem] p-8 md:p-16 flex flex-col lg:flex-row lg:items-center gap-12">
-          <div className="w-full lg:w-1/2 aspect-square md:aspect-video lg:aspect-square rounded-[2rem] overflow-hidden">
-            <img 
-              src="https://images.unsplash.com/photo-1514525253361-bee8a19740c1?auto=format&fit=crop&q=80&w=1000" 
-              className="w-full h-full object-cover hover:scale-110 transition-transform duration-1000"
-              alt="Live performance"
-            />
-          </div>
-          <div className="w-full lg:w-1/2">
-            <span className="text-amber-500 font-black tracking-[0.4em] uppercase text-xs">Exclusives</span>
-            <h2 className="text-4xl md:text-6xl font-black text-white mt-4 mb-8 italic uppercase leading-[0.9]">Beyond The Recording.</h2>
-            <p className="text-zinc-400 text-lg mb-10 font-light leading-relaxed">
-              We sit down with the voices behind the tracks. Learn about the struggle, the process, and what it really takes to make it in the 717.
-            </p>
-            <button className="flex items-center gap-4 text-white group font-black uppercase tracking-widest text-sm">
-              Read Latest Interviews <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center group-hover:bg-amber-500 group-hover:border-amber-500 transition-all"><ChevronRight /></div>
-            </button>
-          </div>
-        </div>
-
         {/* On Rotation Feed */}
         <div className="mt-40">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">

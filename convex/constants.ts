@@ -170,7 +170,7 @@ export function getRegionByZipCode(zip: string): string | null {
 }
 
 export const EVENT_RULES = {
-  GROWTH_MIN_CREDITS: 50,
+  GROWTH_MIN_CREDITS: 100,
   GROWTH_CAN_CREATE_WITH_CREDITS: true,
   GROWTH_CAN_CREATE_WITH_PAYMENT: false,
   ELITE_MAX_EVENTS: 100,

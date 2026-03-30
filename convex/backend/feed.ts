@@ -113,7 +113,7 @@ export const getTrendingContent = query({
   args: { limit: v.optional(v.number()), period: v.optional(v.string()) },
   handler: async (ctx, { limit = 20, period = "week" }) => {
     const now = Date.now();
-    let periodHours = period === "day" ? 24 : period === "month" ? 720 : 168;
+    const periodHours = period === "day" ? 24 : period === "month" ? 720 : 168;
     const cutoff = now - periodHours * 60 * 60 * 1000;
     const allContent = (await ctx.db.query("artistContent").filter((q) => q.eq(q.field("isActive"), true)).collect()).slice(0, 500);
     const trendingItems: any[] = [];

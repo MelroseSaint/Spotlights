@@ -1,19 +1,34 @@
 "use client";
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Calendar, MapPin, Users, Check, Zap, Clock, ExternalLink, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useUser, useEvents, useCheckInToEvent } from "@/hooks/api";
+import { useUser, useEvents, useCheckInToEvent, useFileUrl } from "@/hooks/api";
 import { toast } from "sonner";
 import { Id } from "convex/_generated/dataModel";
 import { formatEventDate, formatTime } from "@/lib/utils";
+import { EVENT_RULES } from "../../convex/constants";
+
+function CreatorAvatar({ creator }: { creator: any }) {
+  const avatarUrl = useFileUrl(creator?.avatarUrl);
+  return (
+    <Avatar className="w-6 h-6 rounded-full">
+      <AvatarImage src={avatarUrl || ""} alt={creator?.name} />
+      <AvatarFallback className="bg-zinc-700 text-xs">
+        {creator?.name?.charAt(0) || "?"}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
 
 export default function Events() {
-  const { user } = useUser();
+  const navigate = useNavigate();
+  const { user, lightCredz } = useUser();
   const { getUpcomingEvents, hasCheckedIn } = useEvents();
   const checkInToEvent = useCheckInToEvent();
   
@@ -21,6 +36,8 @@ export default function Events() {
   const [checkingIn, setCheckingIn] = useState<Id<"events"> | null>(null);
   
   const events = getUpcomingEvents(20);
+
+  const canCreateEvent = lightCredz && lightCredz.balance >= EVENT_RULES.GROWTH_MIN_CREDITS;
 
   const handleCheckIn = async (eventId: Id<"events">) => {
     if (!user) {
@@ -53,9 +70,26 @@ export default function Events() {
           <h1 className="text-4xl md:text-5xl font-black text-white italic uppercase tracking-tight mb-2">
             Events
           </h1>
-          <p className="text-zinc-500 max-w-2xl">
-            Discover events in Central PA and earn LightCredz by checking in!
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-zinc-500 max-w-2xl">
+              Discover events in Central PA and earn LightCredz by checking in!
+            </p>
+            {user && (
+              <Button
+                onClick={() => {
+                  if (!canCreateEvent) {
+                    toast.error(`You need at least ${EVENT_RULES.GROWTH_MIN_CREDITS} LightCredz to create an event`);
+                    return;
+                  }
+                  navigate("/create-event");
+                }}
+                className="bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-xl"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Event
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Tabs */}
@@ -120,12 +154,7 @@ export default function Events() {
 
                       {event.creator && (
                         <div className="flex items-center gap-2 pt-2 border-t border-zinc-800/50">
-                          <Avatar className="w-6 h-6 rounded-full">
-                            <AvatarImage src={event.creator.avatarUrl || ""} alt={event.creator.name} />
-                            <AvatarFallback className="bg-zinc-700 text-xs">
-                              {event.creator.name?.charAt(0) || "?"}
-                            </AvatarFallback>
-                          </Avatar>
+                          <CreatorAvatar creator={event.creator} />
                           <span className="text-zinc-500 text-sm">
                             Hosted by {event.creator.name}
                           </span>

@@ -25,7 +25,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import ContentCard from "@/components/ContentCard";
-import { useUser, useUserById, useFollowUser, useUnfollowUser, useContent, useMessages } from "@/hooks/api";
+import { useUser, useUserById, useFollowUser, useUnfollowUser, useContent, useMessages, useFileUrl } from "@/hooks/api";
 import { toast } from "sonner";
 import { Id } from "convex/_generated/dataModel";
 import { formatTimestamp } from "@/lib/utils";
@@ -41,6 +41,8 @@ export default function Profile() {
   const profileUserId = params.userId as Id<"users"> | undefined;
   const profileUser = useUserById(profileUserId || null);
   const { getUserContent } = useContent();
+  
+  const profileAvatarUrl = useFileUrl(profileUser.avatarUrl);
   
   const userContent = profileUserId ? getUserContent(profileUserId, 50) : null;
   
@@ -75,8 +77,8 @@ export default function Profile() {
         setIsFollowing(true);
         toast.success(`Following ${profileUser?.name}!`);
       }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update follow status");
+    } catch (error) {
+      toast.error((error as Error).message || "Failed to update follow status");
     } finally {
       setIsProcessing(false);
     }
@@ -96,8 +98,8 @@ export default function Profile() {
         initiatorId: currentUser._id,
       });
       navigate(`/messages/${conversationId}`);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to start conversation");
+    } catch (error) {
+      toast.error((error as Error).message || "Failed to start conversation");
     } finally {
       setIsProcessing(false);
     }
@@ -189,7 +191,7 @@ export default function Profile() {
                 <div className="w-32 h-32 rounded-3xl overflow-hidden border-4 border-zinc-950 shadow-2xl">
                   {profileUser.avatarUrl ? (
                     <Avatar className="w-full h-full rounded-none">
-                      <AvatarImage src={profileUser.avatarUrl} alt={profileUser.name} />
+                      <AvatarImage src={profileAvatarUrl} alt={profileUser.name} />
                       <AvatarFallback className="bg-gradient-to-br from-amber-500 to-orange-600 text-white text-4xl font-bold">
                         {profileUser.name?.charAt(0) || "?"}
                       </AvatarFallback>
