@@ -48,3 +48,11 @@ export const isExpired = (timestamp: number | Date | undefined | null): boolean 
   const date = typeof timestamp === "number" ? new Date(timestamp) : timestamp;
   return date.getTime() < Date.now();
 };
+
+export const getImageUrl = (url: string | undefined | null): string | null => {
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+  return url;
+};
