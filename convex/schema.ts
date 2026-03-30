@@ -37,6 +37,8 @@ export default defineSchema({
     firstContentDate: v.optional(v.number()),
     eventCount: v.optional(v.number()),
     maxEventsAllowed: v.optional(v.number()),
+    stripeConnectAccountId: v.optional(v.string()),
+    stripeConnectOnboarded: v.optional(v.boolean()),
   })
     .index("by_email", ["email"])
     .index("by_role", ["role"])

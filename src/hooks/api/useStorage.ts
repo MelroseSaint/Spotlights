@@ -69,5 +69,9 @@ export const useStorage = () => {
 };
 
 export const useFileUrl = (storageId: string | undefined | null) => {
+  if (!storageId) return null;
+  if (storageId.startsWith("http://") || storageId.startsWith("https://")) {
+    return storageId;
+  }
   return useQuery(api.backend.storage.getFileUrl, storageId ? { storageId } : "skip");
 };
