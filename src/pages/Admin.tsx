@@ -1,29 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { 
-  Users, 
-  Music, 
-  Heart, 
-  Flag, 
-  BarChart3, 
+import { useNavigate } from "react-router-dom";
+import {
+  Users,
+  Music,
+  Heart,
+  Flag,
+  BarChart3,
   Shield,
-  Search,
-  Eye,
   Trash2,
   Check,
   X,
   AlertTriangle,
   Clock,
-  RefreshCw,
   Crown,
   Zap,
   UserCheck,
   UserX,
   Plus,
   Flame,
-  AlertCircle
+  AlertCircle,
+  Download,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,14 +32,29 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useUser, useAdmin, useVerifyAdminAccess, useAdminDashboard, useApproveContent, useRejectContent, useUpdateUserRole, useSuspendUser, useDeleteUser, useModerationLogs, useHottestArtists, useAllHottestArtistsAdmin, useAddHottestArtist, useRemoveHottestArtist, useClearHottestArtists } from "@/hooks/api";
+import {
+  useUser,
+  useAdmin,
+  useVerifyAdminAccess,
+  useAdminDashboard,
+  useApproveContent,
+  useRejectContent,
+  useUpdateUserRole,
+  useSuspendUser,
+  useDeleteUser,
+  useModerationLogs,
+  useAllHottestArtistsAdmin,
+  useAddHottestArtist,
+  useRemoveHottestArtist,
+  useClearHottestArtists,
+} from "@/hooks/api";
 import { toast } from "sonner";
 import { Id } from "convex/_generated/dataModel";
 import { formatTimestamp } from "@/lib/utils";
 
 export default function Admin() {
   const navigate = useNavigate();
-  const { user, isLoading } = useUser();
+  const { user } = useUser();
   const { moderationQueue, allUsers } = useAdmin();
   const adminAccess = useVerifyAdminAccess(user?._id);
   const dashboard = useAdminDashboard(user?._id);
@@ -49,161 +63,207 @@ export default function Admin() {
   const updateUserRole = useUpdateUserRole();
   const suspendUser = useSuspendUser();
   const deleteUser = useDeleteUser();
-  
+
   const [activeTab, setActiveTab] = useState("moderation");
   const [searchQuery, setSearchQuery] = useState("");
   const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
-  const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [newRole, setNewRole] = useState<string>("");
   const [hottestSearch, setHottestSearch] = useState("");
   const [showAddHottest, setShowAddHottest] = useState(false);
-  
+
   const moderationLogs = useModerationLogs(100, true);
   const hottestArtistsAdmin = useAllHottestArtistsAdmin();
   const addHottestArtist = useAddHottestArtist();
   const removeHottestArtist = useRemoveHottestArtist();
   const clearHottestArtists = useClearHottestArtists();
 
-  const isAdmin = (adminAccess?.isAdmin ?? false) || user?.email === "monroeodoses@gmail.com" || user?.email === "monroedoses@gmail.com";
-  const isLoadingAccess = adminAccess === undefined;
+  const isAdmin =
+    (adminAccess?.isAdmin ?? false) ||
+    user?.email === "monroedoses@gmail.com";
 
-  const filteredUsers = allUsers?.filter(u => {
+  const filteredUsers = allUsers?.filter((u) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
-    return u.name.toLowerCase().includes(q) || 
-           u.email.toLowerCase().includes(q) || 
-           (u.username && u.username.toLowerCase().includes(q));
+    return (
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      (u.username && u.username.toLowerCase().includes(q))
+    );
   }) || [];
 
   const handleApproveContent = async (contentId: Id<"artistContent">) => {
     if (!user) return;
-    setIsProcessing(contentId);
     try {
       await approveContent({ moderatorId: user._id, contentId });
-      toast.success("Content approved successfully!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to approve content");
-    } finally {
-      setIsProcessing(null);
+      toast.success("Content approved!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to approve");
     }
   };
 
   const handleRejectContent = async (contentId: Id<"artistContent">) => {
     if (!user) return;
     const reason = rejectReason[contentId];
-    if (!reason || reason.trim().length === 0) {
+    if (!reason?.trim()) {
       toast.error("Please provide a rejection reason");
       return;
     }
-    setIsProcessing(contentId);
     try {
       await rejectContent({ moderatorId: user._id, contentId, reason });
       toast.success("Content rejected");
-      setRejectReason(prev => ({ ...prev, [contentId]: "" }));
-    } catch (error: any) {
-      toast.error(error.message || "Failed to reject content");
-    } finally {
-      setIsProcessing(null);
+      setRejectReason((prev) => ({ ...prev, [contentId]: "" }));
+    } catch (err: any) {
+      toast.error(err.message || "Failed to reject");
     }
   };
 
   const handleUpdateRole = async (targetUserId: Id<"users">) => {
-    if (!user) return;
-    if (!newRole) {
-      toast.error("Please select a role");
-      return;
-    }
+    if (!user || !newRole) return;
     try {
       await updateUserRole({ adminId: user._id, targetUserId, newRole });
-      toast.success("User role updated!");
-      setNewRole("");
+      toast.success("Role updated");
       setSelectedUser(null);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update role");
+      setNewRole("");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update role");
     }
   };
 
   const handleSuspendUser = async (targetUserId: Id<"users">, currentlySuspended: boolean) => {
     if (!user) return;
     try {
-      await suspendUser({ adminId: user._id, targetUserId, reason: currentlySuspended ? "Reinstating user" : "Account suspended by admin" });
-      toast.success(currentlySuspended ? "User reinstated" : "User suspended");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update user status");
+      await suspendUser({
+        adminId: user._id,
+        targetUserId,
+        reason: currentlySuspended ? "Unsuspended by admin" : "Suspended by admin",
+      });
+      toast.success(currentlySuspended ? "User unsuspended" : "User suspended");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update suspension status");
     }
   };
 
-  const handleDeleteUser = async (targetUserId: Id<"users">, targetName: string) => {
+  const handleDeleteUser = async (targetUserId: Id<"users">, name: string) => {
     if (!user) return;
-    if (!confirm(`Are you sure you want to permanently delete ${targetName}? This action cannot be undone.`)) {
-      return;
-    }
+    if (!confirm(`Delete user "${name}"? This cannot be undone.`)) return;
     try {
       await deleteUser({ adminId: user._id, targetUserId });
-      toast.success("User deleted successfully");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete user");
+      toast.success("User deleted");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete user");
     }
   };
 
-  const getRoleBadge = (role?: string) => {
-    switch (role) {
-      case "root_admin":
-        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30"><Shield className="w-3 h-3 mr-1" />Root</Badge>;
-      case "admin":
-        return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30"><Shield className="w-3 h-3 mr-1" />Admin</Badge>;
-      case "moderator":
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30"><Shield className="w-3 h-3 mr-1" />Mod</Badge>;
-      default:
-        return <Badge className="bg-zinc-500/20 text-zinc-400 border-zinc-500/30">User</Badge>;
+  const exportFullReport = () => {
+    if (!dashboard || !allUsers || !moderationQueue) return;
+    const report = {
+      generatedAt: new Date().toISOString(),
+      summary: dashboard.stats,
+      tierBreakdown: dashboard.tierBreakdown,
+      roleBreakdown: dashboard.roleBreakdown,
+      users: allUsers.map((u) => ({
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        tier: u.tier,
+        followers: u.followers,
+        posts: u.postsCount,
+        verified: u.isVerified,
+        suspended: u.isSuspended,
+        created: new Date(u.createdAt || 0).toISOString(),
+      })),
+      moderationQueue: moderationQueue.map((item) => ({
+        title: item.content?.title,
+        owner: item.owner?.name,
+        email: item.owner?.email,
+        status: item.status,
+        created: new Date(item.createdAt).toISOString(),
+      })),
+    };
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `admin-report-${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Report exported");
+  };
+
+  const exportUsersCSV = () => {
+    if (!allUsers) return;
+    const headers = ["Name", "Email", "Role", "Tier", "Followers", "Posts", "Verified", "Suspended", "Created"];
+    const rows = allUsers.map((u) => [
+      u.name,
+      u.email,
+      u.role || "user",
+      u.tier || "standard",
+      u.followers || 0,
+      u.postsCount || 0,
+      u.isVerified ? "Yes" : "No",
+      u.isSuspended ? "Yes" : "No",
+      new Date(u.createdAt || 0).toLocaleDateString(),
+    ]);
+    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `users-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Users CSV exported");
+  };
+
+  const handleAddHottest = async (artistId: string) => {
+    if (!user || !artistId) return;
+    try {
+      await addHottestArtist({ artistId: artistId as Id<"users">, addedBy: user._id });
+      toast.success("Artist added to Hottest!");
+      setShowAddHottest(false);
+      setHottestSearch("");
+    } catch (err: any) {
+      toast.error(err.message);
     }
   };
 
-  const getTierBadge = (tier?: string) => {
-    switch (tier) {
-      case "elite":
-        return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30"><Crown className="w-3 h-3 mr-1" />Elite</Badge>;
-      case "growth":
-        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30"><Zap className="w-3 h-3 mr-1" />Growth</Badge>;
-      default:
-        return <Badge className="bg-zinc-500/20 text-zinc-400 border-zinc-500/30">Standard</Badge>;
+  const handleRemoveHottest = async (artistId: Id<"users">) => {
+    if (!user) return;
+    try {
+      await removeHottestArtist({ artistId, removedBy: user._id });
+      toast.success("Artist removed");
+    } catch (err: any) {
+      toast.error(err.message);
     }
   };
 
-  if (isLoading || isLoadingAccess) {
+  const handleClearHottest = async () => {
+    if (!user) return;
+    if (!confirm("Clear all hottest artists?")) return;
+    try {
+      await clearHottestArtists({ clearedBy: user._id });
+      toast.success("Hottest list cleared");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  if (adminAccess === undefined) {
     return (
-      <div className="space-y-8">
-        <div className="h-12 bg-zinc-800/50 rounded-xl animate-pulse" />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {Array.from({ length: 4 }).map((_, idx) => (
-            <div key={idx} className="h-32 bg-zinc-800/50 rounded-3xl animate-pulse" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="text-center py-20">
-        <Shield className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
-        <h3 className="text-2xl font-bold text-white mb-2">Sign In Required</h3>
-        <p className="text-zinc-400 mb-6">Please sign in to access the admin panel.</p>
-        <Button onClick={() => navigate("/signup")} className="bg-amber-500 hover:bg-amber-400 text-black font-bold">
-          Sign In
-        </Button>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full" />
       </div>
     );
   }
 
   if (!isAdmin) {
     return (
-      <div className="text-center py-20">
-        <Shield className="w-16 h-16 text-red-500 mx-auto mb-4" />
-        <h3 className="text-2xl font-bold text-white mb-2">Access Denied</h3>
-        <p className="text-zinc-400 mb-6">You don't have permission to access the admin panel.</p>
-        <Button onClick={() => navigate("/")} variant="outline" className="rounded-xl">
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <Shield className="w-16 h-16 text-zinc-700" />
+        <h1 className="text-2xl font-bold text-white">Access Denied</h1>
+        <p className="text-zinc-400">You don&apos;t have admin privileges.</p>
+        <Button onClick={() => navigate("/")} className="bg-amber-500 hover:bg-amber-400 text-black">
           Go Home
         </Button>
       </div>
@@ -211,7 +271,7 @@ export default function Admin() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -223,644 +283,433 @@ export default function Admin() {
             Admin Dashboard
           </h1>
           <p className="text-zinc-400 mt-2">
-            Welcome back, {user.name}. You have {adminAccess.role} privileges.
+            Welcome back, {user?.name}. You have {adminAccess.role} privileges.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            className="rounded-xl border-zinc-700"
-            onClick={() => {
-              if (!dashboard || !allUsers || !moderationQueue) return;
-              
-              const report = {
-                generatedAt: new Date().toISOString(),
-                summary: {
-                  totalUsers: dashboard.stats.totalUsers,
-                  totalContent: dashboard.stats.totalContent,
-                  activeContent: dashboard.stats.activeContent,
-                  pendingModeration: dashboard.stats.pendingModeration,
-                  activePromotions: dashboard.stats.activePromotions,
-                  tierBreakdown: dashboard.tierBreakdown,
-                  roleBreakdown: dashboard.roleBreakdown,
-                },
-                users: allUsers.map(u => ({
-                  id: u._id,
-                  name: u.name,
-                  email: u.email,
-                  role: u.role,
-                  tier: u.tier,
-                  followers: u.followers,
-                  postsCount: u.postsCount,
-                  isVerified: u.isVerified,
-                  isSuspended: u.isSuspended,
-                  createdAt: new Date(u.createdAt || 0).toISOString(),
-                })),
-                moderationQueue: moderationQueue.map(item => ({
-                  id: item._id,
-                  contentTitle: item.content?.title,
-                  contentDescription: item.content?.description,
-                  ownerName: item.owner?.name,
-                  ownerEmail: item.owner?.email,
-                  status: item.status,
-                  createdAt: new Date(item.createdAt).toISOString(),
-                })),
-              };
-              
-              const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `admin-report-${new Date().toISOString().split("T")[0]}.json`;
-              a.click();
-              URL.revokeObjectURL(url);
-              toast.success("Report exported successfully!");
-            }}
-          >
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Export Reports
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={exportFullReport} variant="outline" className="rounded-xl border-zinc-700">
+            <FileText className="w-4 h-4 mr-2" />
+            Export Report
           </Button>
-          <Button 
-            variant="outline" 
-            className="rounded-xl border-zinc-700"
-            onClick={() => {
-              if (!allUsers) return;
-              
-              const headers = ["Name", "Email", "Role", "Tier", "Followers", "Posts", "Verified", "Suspended", "Created"];
-              const rows = allUsers.map(u => [
-                u.name,
-                u.email,
-                u.role || "user",
-                u.tier || "standard",
-                u.followers || 0,
-                u.postsCount || 0,
-                u.isVerified ? "Yes" : "No",
-                u.isSuspended ? "Yes" : "No",
-                new Date(u.createdAt || 0).toLocaleDateString(),
-              ]);
-              
-              const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(",")).join("\n");
-              const blob = new Blob([csv], { type: "text/csv" });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `users-export-${new Date().toISOString().split("T")[0]}.csv`;
-              a.click();
-              URL.revokeObjectURL(url);
-              toast.success("Users CSV exported!");
-            }}
-          >
-            <Users className="w-4 h-4 mr-2" />
-            Export Users CSV
+          <Button onClick={exportUsersCSV} variant="outline" className="rounded-xl border-zinc-700">
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
           </Button>
         </div>
       </div>
 
-      {/* Stats Overview */}
+      {/* Stats */}
       {dashboard && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          <Card className="bg-zinc-900/50 border-zinc-800 rounded-2xl">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-zinc-400 mb-1">Total Users</p>
-                  <h3 className="text-2xl font-bold text-white">{dashboard.stats.totalUsers.toLocaleString()}</h3>
-                </div>
-                <div className="bg-blue-500 w-12 h-12 rounded-xl flex items-center justify-center">
-                  <Users className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-zinc-900/50 border-zinc-800 rounded-2xl">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-zinc-400 mb-1">Total Content</p>
-                  <h3 className="text-2xl font-bold text-white">{dashboard.stats.totalContent.toLocaleString()}</h3>
-                </div>
-                <div className="bg-purple-500 w-12 h-12 rounded-xl flex items-center justify-center">
-                  <Music className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-zinc-900/50 border-zinc-800 rounded-2xl">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-zinc-400 mb-1">Pending Review</p>
-                  <h3 className="text-2xl font-bold text-amber-500">{dashboard.stats.pendingModeration}</h3>
-                </div>
-                <div className="bg-amber-500 w-12 h-12 rounded-xl flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-black" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-zinc-900/50 border-zinc-800 rounded-2xl">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-zinc-400 mb-1">Active Promotions</p>
-                  <h3 className="text-2xl font-bold text-white">{dashboard.stats.activePromotions}</h3>
-                </div>
-                <div className="bg-green-500 w-12 h-12 rounded-xl flex items-center justify-center">
-                  <Heart className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-zinc-900/50 border-zinc-800 rounded-2xl">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-zinc-400 mb-1">Active Content</p>
-                  <h3 className="text-2xl font-bold text-white">{dashboard.stats.activeContent.toLocaleString()}</h3>
-                </div>
-                <div className="bg-pink-500 w-12 h-12 rounded-xl flex items-center justify-center">
-                  <Flag className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <StatCard label="Total Users" value={dashboard.stats.totalUsers} icon={<Users className="w-5 h-5" />} color="blue" />
+          <StatCard label="Total Content" value={dashboard.stats.totalContent} icon={<Music className="w-5 h-5" />} color="purple" />
+          <StatCard label="Pending" value={dashboard.stats.pendingModeration} icon={<Clock className="w-5 h-5" />} color="amber" />
+          <StatCard label="Active Promos" value={dashboard.stats.activePromotions} icon={<Heart className="w-5 h-5" />} color="green" />
+          <StatCard label="Active Content" value={dashboard.stats.activeContent} icon={<Flag className="w-5 h-5" />} color="pink" />
         </div>
       )}
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 bg-zinc-900/50 rounded-2xl p-1">
-          <TabsTrigger 
-            value="moderation" 
-            className="rounded-xl data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold"
-          >
-            <AlertTriangle className="w-4 h-4 mr-2" />
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-5 bg-zinc-900/50 rounded-xl p-1">
+          <TabsTrigger value="moderation" className="rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold">
+            <AlertTriangle className="w-4 h-4 mr-1" />
             Mod
             {moderationQueue && moderationQueue.length > 0 && (
-              <Badge className="ml-1 bg-red-500 text-white rounded-full text-xs">
-                {moderationQueue.length}
-              </Badge>
+              <Badge className="ml-1 bg-red-500 text-white rounded-full text-xs">{moderationQueue.length}</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger 
-            value="users" 
-            className="rounded-xl data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold"
-          >
-            <Users className="w-4 h-4 mr-2" />
+          <TabsTrigger value="users" className="rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold">
+            <Users className="w-4 h-4 mr-1" />
             Users
           </TabsTrigger>
-          <TabsTrigger 
-            value="content" 
-            className="rounded-xl data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold"
-          >
-            <Music className="w-4 h-4 mr-2" />
-            Content
-          </TabsTrigger>
-          <TabsTrigger 
-            value="hottest" 
-            className="rounded-xl data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold"
-          >
-            <Flame className="w-4 h-4 mr-2" />
+          <TabsTrigger value="hottest" className="rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold">
+            <Flame className="w-4 h-4 mr-1" />
             Hottest
           </TabsTrigger>
-          <TabsTrigger 
-            value="modlogs" 
-            className="rounded-xl data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold"
-          >
-            <AlertCircle className="w-4 h-4 mr-2" />
+          <TabsTrigger value="logs" className="rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold">
+            <AlertCircle className="w-4 h-4 mr-1" />
             Logs
+          </TabsTrigger>
+          <TabsTrigger value="content" className="rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold">
+            <Music className="w-4 h-4 mr-1" />
+            Content
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="moderation" className="mt-8">
-          <Card className="bg-zinc-900/50 border-zinc-800 rounded-3xl">
-            <CardHeader className="p-6">
+        {/* Moderation Tab */}
+        <TabsContent value="moderation" className="mt-6">
+          <Card className="bg-zinc-900/50 border-zinc-800 rounded-2xl">
+            <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span className="text-xl font-bold text-white">Moderation Queue</span>
-                <Badge variant="secondary" className="bg-amber-500/20 text-amber-500 rounded-full">
+                <span>Moderation Queue</span>
+                <Badge variant="secondary" className="bg-amber-500/20 text-amber-500">
                   {moderationQueue?.length || 0} pending
                 </Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6 pt-0">
+            <CardContent className="space-y-4">
               {moderationQueue && moderationQueue.length > 0 ? (
-                <div className="space-y-6">
-                  {moderationQueue.map((item: any) => (
-                    <div key={item._id} className="bg-zinc-800/50 rounded-2xl p-6 border border-zinc-700/50">
-                      <div className="flex items-start gap-4 mb-4">
-                        <Avatar className="w-12 h-12 rounded-full">
-                          <AvatarImage src={item.owner?.avatarUrl || ""} alt={item.owner?.name} />
-                          <AvatarFallback className="bg-zinc-700">
-                            {item.owner?.name?.charAt(0) || "?"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-bold text-white">{item.owner?.name || "Unknown"}</h4>
-                            <Badge variant="secondary" className="text-xs rounded-full">
-                              {item.owner?.tier || "standard"}
-                            </Badge>
-                          </div>
-                          <p className="text-zinc-500 text-sm">{item.owner?.email}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-zinc-500 text-sm">
-                            {formatTimestamp(item.createdAt)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {item.content && (
-                        <div className="bg-zinc-900/50 rounded-xl p-4 mb-4">
-                          <h5 className="font-bold text-white mb-2">{item.content.title}</h5>
-                          <p className="text-zinc-400 text-sm line-clamp-2">{item.content.description}</p>
-                          <div className="flex gap-2 mt-3">
-                            <Badge variant="outline" className="border-zinc-600 text-zinc-400">
-                              {item.content.genre}
-                            </Badge>
-                            <Badge variant="outline" className="border-zinc-600 text-zinc-400">
-                              {item.content.region}
-                            </Badge>
-                            <Badge variant="outline" className="border-zinc-600 text-zinc-400">
-                              {item.content.contentType}
-                            </Badge>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="space-y-3">
-                        <Textarea
-                          placeholder="Rejection reason (required if rejecting)..."
-                          value={rejectReason[item.content?._id] || ""}
-                          onChange={(e) => setRejectReason(prev => ({ 
-                            ...prev, 
-                            [item.content?._id]: e.target.value 
-                          }))}
-                          className="bg-zinc-900/50 border-zinc-700 text-white rounded-xl"
-                        />
-                        <div className="flex gap-3">
-                          <Button
-                            onClick={() => handleApproveContent(item.content?._id)}
-                            disabled={isProcessing === item.content?._id}
-                            className="flex-1 bg-green-600 hover:bg-green-500 text-white rounded-xl"
-                          >
-                            <Check className="w-4 h-4 mr-2" />
-                            Approve
-                          </Button>
-                          <Button
-                            onClick={() => handleRejectContent(item.content?._id)}
-                            disabled={isProcessing === item.content?._id}
-                            variant="destructive"
-                            className="flex-1 bg-red-600 hover:bg-red-500 rounded-xl"
-                          >
-                            <X className="w-4 h-4 mr-2" />
-                            Reject
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Check className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-white mb-2">All Caught Up!</h3>
-                  <p className="text-zinc-400">No content pending review.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="users" className="mt-8">
-          <Card className="bg-zinc-900/50 border-zinc-800 rounded-3xl">
-            <CardHeader className="p-6">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <CardTitle className="text-xl font-bold text-white">User Management ({filteredUsers.length})</CardTitle>
-                <div className="relative w-full md:w-64">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-500 w-4 h-4" />
-                  <Input 
-                    placeholder="Search users..." 
-                    className="pl-10 bg-zinc-800/50 border-zinc-700 text-white rounded-xl"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                moderationQueue.map((item: any) => (
+                  <ModerationItem
+                    key={item._id}
+                    item={item}
+                    rejectReason={rejectReason[item.content?._id] || ""}
+                    onRejectReasonChange={(val) => setRejectReason((prev) => ({ ...prev, [item.content?._id]: val }))}
+                    onApprove={() => handleApproveContent(item.content?._id)}
+                    onReject={() => handleRejectContent(item.content?._id)}
                   />
-                </div>
-              </div>
+                ))
+              ) : (
+                <EmptyState icon={<Check className="w-12 h-12" />} title="All Clear" description="No content pending moderation" />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Users Tab */}
+        <TabsContent value="users" className="mt-6">
+          <Card className="bg-zinc-900/50 border-zinc-800 rounded-2xl">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Users ({filteredUsers.length})</span>
+                <Input
+                  placeholder="Search users..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-64 bg-zinc-900/50 border-zinc-700"
+                />
+              </CardTitle>
             </CardHeader>
-            <CardContent className="p-6 pt-0">
+            <CardContent>
               {filteredUsers.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {filteredUsers.map((u: any) => (
-                    <div key={u._id} className="bg-zinc-800/50 rounded-2xl p-4 border border-zinc-700/50">
-                      <div className="flex items-start gap-4">
-                        <Avatar className="w-12 h-12 rounded-full">
-                          <AvatarImage src={u.avatarUrl || ""} alt={u.name} />
-                          <AvatarFallback className="bg-amber-500/20 text-amber-500">
-                            {u.name?.charAt(0) || "?"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-bold text-white truncate">{u.name}</h4>
-                            {u.isVerified && <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs">Verified</Badge>}
-                            {u.isSuspended && <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">Suspended</Badge>}
-                          </div>
-                          <p className="text-zinc-500 text-sm truncate">{u.email}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            {getRoleBadge(u.role)}
-                            {getTierBadge(u.tier)}
-                            <span className="text-zinc-600 text-xs">• {u.followers || 0} followers</span>
-                            <span className="text-zinc-600 text-xs">• {u.activeContentCount || 0} uploads</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Link to={`/profile/${u._id}`}>
-                            <Button variant="ghost" size="icon" className="rounded-xl">
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          </Link>
-                          {selectedUser === u._id ? (
-                            <div className="flex items-center gap-2">
-                              <Select value={newRole} onValueChange={setNewRole}>
-                                <SelectTrigger className="w-[120px] bg-zinc-700 border-zinc-600">
-                                  <SelectValue placeholder="Role" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-zinc-800 border-zinc-700">
-                                  <SelectItem value="user">User</SelectItem>
-                                  <SelectItem value="moderator">Moderator</SelectItem>
-                                  <SelectItem value="admin">Admin</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Button onClick={() => handleUpdateRole(u._id)} size="sm" className="bg-amber-500 hover:bg-amber-400 text-black">
-                                Save
-                              </Button>
-                              <Button onClick={() => { setSelectedUser(null); setNewRole(""); }} variant="ghost" size="sm">
-                                Cancel
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button 
-                              onClick={() => { setSelectedUser(u._id); setNewRole(u.role); }} 
-                              variant="outline" 
-                              size="sm" 
-                              className="border-zinc-600"
-                            >
-                              <Shield className="w-4 h-4 mr-1" />
-                              Role
-                            </Button>
-                          )}
-                          <Button
-                            onClick={() => handleSuspendUser(u._id, !!u.isSuspended)}
-                            variant="ghost"
-                            size="icon"
-                            className={u.isSuspended ? "text-green-500 hover:text-green-400" : "text-red-500 hover:text-red-400"}
-                          >
-                            {u.isSuspended ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
-                          </Button>
-                          <Button
-                            onClick={() => handleDeleteUser(u._id, u.name)}
-                            variant="ghost"
-                            size="icon"
-                            className="text-red-600 hover:text-red-500 hover:bg-red-500/10"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                    <UserRow
+                      key={u._id}
+                      user={u}
+                      onRoleChange={(role) => { setSelectedUser(u._id); setNewRole(role); }}
+                      onSuspend={() => handleSuspendUser(u._id, !!u.isSuspended)}
+                      onDelete={() => handleDeleteUser(u._id, u.name)}
+                      selectedUserId={selectedUser}
+                      newRole={newRole}
+                      onUpdateRole={() => handleUpdateRole(u._id as Id<"users">)}
+                      onCancelRole={() => { setSelectedUser(null); setNewRole(""); }}
+                    />
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <Users className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-white mb-2">No Users Found</h3>
-                  <p className="text-zinc-400">Try a different search term.</p>
-                </div>
+                <EmptyState icon={<Users className="w-12 h-12" />} title="No Users" description="Try a different search" />
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="content" className="mt-8">
-          <Card className="bg-zinc-900/50 border-zinc-800 rounded-3xl">
-            <CardHeader className="p-6">
-              <CardTitle className="text-xl font-bold text-white">Content Overview</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 pt-0">
-              {dashboard && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-zinc-800/50 rounded-xl p-4">
-                    <p className="text-zinc-400 text-sm">Total Content</p>
-                    <p className="text-2xl font-bold text-white">{dashboard.stats.totalContent}</p>
-                  </div>
-                  <div className="bg-zinc-800/50 rounded-xl p-4">
-                    <p className="text-zinc-400 text-sm">Active Content</p>
-                    <p className="text-2xl font-bold text-green-500">{dashboard.stats.activeContent}</p>
-                  </div>
-                  <div className="bg-zinc-800/50 rounded-xl p-4">
-                    <p className="text-zinc-400 text-sm">Pending Review</p>
-                    <p className="text-2xl font-bold text-amber-500">{dashboard.stats.pendingModeration}</p>
-                  </div>
-                </div>
-              )}
-              <div className="mt-6 text-center py-8">
-                <Music className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-white mb-2">Detailed Content View</h3>
-                <p className="text-zinc-400">Browse and manage all content from the moderation queue above.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="hottest" className="mt-8">
-          <Card className="bg-zinc-900/50 border-zinc-800 rounded-3xl">
-            <CardHeader className="p-6">
-              <CardTitle className="flex items-center justify-between">
+        {/* Hottest Tab */}
+        <TabsContent value="hottest" className="mt-6">
+          <Card className="bg-zinc-900/50 border-zinc-800 rounded-2xl">
+            <CardHeader>
+              <CardTitle className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <Flame className="w-6 h-6 text-amber-500" />
-                  <span className="text-xl font-bold text-white">Hottest in the City</span>
+                  <span>Hottest in the City</span>
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    onClick={() => setShowAddHottest(!showAddHottest)}
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-xl"
-                  >
+                  <Button onClick={() => setShowAddHottest(!showAddHottest)} className="bg-amber-500 hover:bg-amber-400 text-black">
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Artist
+                    Add
                   </Button>
                   {hottestArtistsAdmin && hottestArtistsAdmin.length > 0 && (
-                    <Button
-                      onClick={async () => {
-                        if (!user) return;
-                        try {
-                          await clearHottestArtists({ clearedBy: user._id });
-                          toast.success("Hottest list cleared");
-                        } catch (err: any) {
-                          toast.error(err.message);
-                        }
-                      }}
-                      variant="destructive"
-                      className="rounded-xl"
-                    >
+                    <Button onClick={handleClearHottest} variant="destructive" className="rounded-xl">
                       Clear All
                     </Button>
                   )}
                 </div>
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6 pt-0">
+            <CardContent className="space-y-4">
               {showAddHottest && (
-                <div className="mb-6 p-4 bg-zinc-800/50 rounded-xl">
-                  <p className="text-zinc-400 text-sm mb-3">Select an artist from the Users tab, or search below:</p>
-                  <div className="flex gap-3">
+                <div className="p-4 bg-zinc-800/50 rounded-xl space-y-3">
+                  <p className="text-zinc-400 text-sm">Search and select an artist to add:</p>
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <Input
-                      placeholder="Search artists..."
+                      placeholder="Filter artists..."
                       value={hottestSearch}
                       onChange={(e) => setHottestSearch(e.target.value)}
-                      className="bg-zinc-900/50 border-zinc-700 text-white rounded-xl"
+                      className="bg-zinc-900/50 border-zinc-700"
                     />
-                    {allUsers && (
-                      <Select onValueChange={async (artistId) => {
-                        if (!user || !artistId) return;
-                        try {
-                          await addHottestArtist({ artistId: artistId as Id<"users">, addedBy: user._id });
-                          toast.success("Artist added to Hottest!");
-                          setShowAddHottest(false);
-                          setHottestSearch("");
-                        } catch (err: any) {
-                          toast.error(err.message);
-                        }
-                      }}>
-                        <SelectTrigger className="w-[200px] bg-zinc-900/50 border-zinc-700 text-white rounded-xl">
-                          <SelectValue placeholder="Select artist" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-zinc-900 border-zinc-800">
-                          {allUsers
-                            .filter(u => u.name.toLowerCase().includes(hottestSearch.toLowerCase()))
-                            .filter(u => !hottestArtistsAdmin?.some(h => h.artistId === u._id))
-                            .slice(0, 10)
-                            .map(u => (
-                              <SelectItem key={u._id} value={u._id} className="text-white">
-                                {u.name}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    }
+                    <Select onValueChange={handleAddHottest}>
+                      <SelectTrigger className="w-full sm:w-[200px] bg-zinc-900/50 border-zinc-700">
+                        <SelectValue placeholder="Select artist" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-zinc-800">
+                        {allUsers
+                          ?.filter((u) => u.name.toLowerCase().includes(hottestSearch.toLowerCase()))
+                          .filter((u) => !hottestArtistsAdmin?.some((h) => h.artistId === u._id))
+                          .slice(0, 10)
+                          .map((u) => (
+                            <SelectItem key={u._id} value={u._id} className="text-white">
+                              {u.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               )}
-              
               {hottestArtistsAdmin && hottestArtistsAdmin.length > 0 ? (
-                <div className="space-y-4">
-                  {hottestArtistsAdmin.map((item: any, idx: number) => (
-                    <div key={item._id} className="flex items-center gap-4 p-4 bg-zinc-800/50 rounded-xl">
-                      <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold">
-                        #{idx + 1}
-                      </div>
-                      <Avatar className="w-12 h-12">
-                        <AvatarImage src={item.artist?.avatarUrl} />
-                        <AvatarFallback className="bg-zinc-700 text-white">
-                          {item.artist?.name?.charAt(0) || "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="font-bold text-white">{item.artist?.name}</p>
-                        <p className="text-zinc-500 text-sm">{item.artist?.email}</p>
-                      </div>
-                      <Button
-                        onClick={async () => {
-                          if (!user) return;
-                          try {
-                            await removeHottestArtist({ artistId: item.artistId, removedBy: user._id });
-                            toast.success("Artist removed from Hottest");
-                          } catch (err: any) {
-                            toast.error(err.message);
-                          }
-                        }}
-                        variant="ghost"
-                        className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+                hottestArtistsAdmin.map((item: any, idx: number) => (
+                  <div key={item._id} className="flex items-center gap-4 p-4 bg-zinc-800/50 rounded-xl">
+                    <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold">
+                      #{idx + 1}
                     </div>
-                  ))}
-                </div>
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={item.artist?.avatarUrl} />
+                      <AvatarFallback className="bg-zinc-700">{item.artist?.name?.charAt(0) || "?"}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-white truncate">{item.artist?.name}</p>
+                      <p className="text-zinc-500 text-sm truncate">{item.artist?.email}</p>
+                    </div>
+                    <Button onClick={() => handleRemoveHottest(item.artistId as Id<"users">)} variant="ghost" className="text-red-500 hover:text-red-400">
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))
               ) : (
-                <div className="text-center py-12">
-                  <Flame className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-white mb-2">No Hottest Artists</h3>
-                  <p className="text-zinc-400">Add artists to feature them in the Hottest section.</p>
-                </div>
+                <EmptyState icon={<Flame className="w-12 h-12" />} title="No Hottest Artists" description="Add artists to feature them here" />
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="modlogs" className="mt-8">
-          <Card className="bg-zinc-900/50 border-zinc-800 rounded-3xl">
-            <CardHeader className="p-6">
+        {/* Logs Tab */}
+        <TabsContent value="logs" className="mt-6">
+          <Card className="bg-zinc-900/50 border-zinc-800 rounded-2xl">
+            <CardHeader>
               <CardTitle className="flex items-center gap-3">
                 <AlertCircle className="w-6 h-6 text-amber-500" />
-                <span className="text-xl font-bold text-white">Moderation Logs</span>
+                <span>Moderation Logs</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6 pt-0">
+            <CardContent>
               {moderationLogs && moderationLogs.length > 0 ? (
-                <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                <div className="space-y-3 max-h-[500px] overflow-y-auto">
                   {moderationLogs.map((log: any) => (
-                    <div key={log._id} className="p-4 bg-zinc-800/50 rounded-xl border border-zinc-700/50">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          {log.flagged && (
-                            <Badge variant="destructive" className="rounded-full">
-                              Flagged
-                            </Badge>
-                          )}
-                          <Badge className={`rounded-full ${
-                            log.actionTaken === "block" ? "bg-red-500/20 text-red-500" :
-                            log.actionTaken === "warn" ? "bg-amber-500/20 text-amber-500" :
-                            "bg-green-500/20 text-green-500"
-                          }`}>
-                            {log.actionTaken}
-                          </Badge>
-                          <Badge variant="outline" className="border-zinc-600 text-zinc-400 rounded-full">
-                            {log.contentType}
-                          </Badge>
-                        </div>
-                        <span className="text-zinc-500 text-sm">
-                          {formatTimestamp(log.createdAt)}
-                        </span>
+                    <div key={log._id} className="p-4 bg-zinc-800/50 rounded-xl">
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        {log.flagged && <Badge variant="destructive">Flagged</Badge>}
+                        <Badge className={log.actionTaken === "block" ? "bg-red-500/20 text-red-500" : log.actionTaken === "warn" ? "bg-amber-500/20 text-amber-500" : "bg-green-500/20 text-green-500"}>
+                          {log.actionTaken}
+                        </Badge>
+                        <Badge variant="outline" className="border-zinc-600">{log.contentType}</Badge>
+                        <span className="text-zinc-500 text-sm ml-auto">{formatTimestamp(log.createdAt)}</span>
                       </div>
-                      <p className="text-white text-sm mb-2 line-clamp-2">{log.rawContent}</p>
-                      {log.categories && log.categories !== "{}" && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {JSON.parse(log.categories || "{}").map((cat: string, i: number) => (
-                            <span key={i} className="px-2 py-0.5 bg-zinc-700/50 text-zinc-400 text-xs rounded">
-                              {cat}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <p className="text-white text-sm line-clamp-2">{log.rawContent}</p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <AlertCircle className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-white mb-2">No Moderation Logs</h3>
-                  <p className="text-zinc-400">Flagged content will appear here.</p>
-                </div>
+                <EmptyState icon={<AlertCircle className="w-12 h-12" />} title="No Logs" description="Moderation activity will appear here" />
               )}
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Content Tab */}
+        <TabsContent value="content" className="mt-6">
+          <Card className="bg-zinc-900/50 border-zinc-800 rounded-2xl">
+            <CardHeader>
+              <CardTitle>Content Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {dashboard && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-zinc-800/50 rounded-xl p-4">
+                    <p className="text-zinc-400 text-sm">Total</p>
+                    <p className="text-2xl font-bold text-white">{dashboard.stats.totalContent}</p>
+                  </div>
+                  <div className="bg-zinc-800/50 rounded-xl p-4">
+                    <p className="text-zinc-400 text-sm">Active</p>
+                    <p className="text-2xl font-bold text-green-500">{dashboard.stats.activeContent}</p>
+                  </div>
+                  <div className="bg-zinc-800/50 rounded-xl p-4">
+                    <p className="text-zinc-400 text-sm">Pending</p>
+                    <p className="text-2xl font-bold text-amber-500">{dashboard.stats.pendingModeration}</p>
+                  </div>
+                </div>
+              )}
+              <EmptyState icon={<Music className="w-12 h-12" />} title="Content Management" description="View moderation queue for content details" />
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function StatCard({ label, value, icon, color }: { label: string; value: number; icon: React.ReactNode; color: string }) {
+  const colorMap: Record<string, string> = {
+    blue: "bg-blue-500",
+    purple: "bg-purple-500",
+    amber: "bg-amber-500",
+    green: "bg-green-500",
+    pink: "bg-pink-500",
+  };
+  return (
+    <Card className="bg-zinc-900/50 border-zinc-800 rounded-2xl">
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start">
+          <div>
+            <p className="text-zinc-400 text-sm mb-1">{label}</p>
+            <h3 className="text-2xl font-bold text-white">{value}</h3>
+          </div>
+          <div className={`${colorMap[color]} w-10 h-10 rounded-xl flex items-center justify-center text-white`}>
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmptyState({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+  return (
+    <div className="text-center py-12">
+      <div className="text-zinc-700 mx-auto mb-4 flex justify-center">{icon}</div>
+      <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
+      <p className="text-zinc-400">{description}</p>
+    </div>
+  );
+}
+
+function ModerationItem({
+  item,
+  rejectReason,
+  onRejectReasonChange,
+  onApprove,
+  onReject,
+}: {
+  item: any;
+  rejectReason: string;
+  onRejectReasonChange: (val: string) => void;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  return (
+    <div className="bg-zinc-800/50 rounded-xl p-4 border border-zinc-700/50">
+      <div className="flex items-start gap-4 mb-4">
+        <Avatar className="w-12 h-12">
+          <AvatarImage src={item.owner?.avatarUrl} />
+          <AvatarFallback className="bg-zinc-700">{item.owner?.name?.charAt(0) || "?"}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <h4 className="font-bold text-white">{item.owner?.name || "Unknown"}</h4>
+            <Badge variant="secondary" className="text-xs">{item.owner?.tier || "standard"}</Badge>
+          </div>
+          <p className="text-zinc-500 text-sm">{item.owner?.email}</p>
+        </div>
+        <span className="text-zinc-500 text-sm">{formatTimestamp(item.createdAt)}</span>
+      </div>
+      {item.content && (
+        <div className="bg-zinc-900/50 rounded-lg p-3 mb-4">
+          <h5 className="font-bold text-white mb-1">{item.content.title}</h5>
+          <p className="text-zinc-400 text-sm line-clamp-2">{item.content.description}</p>
+          <div className="flex gap-2 mt-2">
+            <Badge variant="outline" className="border-zinc-600 text-zinc-400 text-xs">{item.content.genre}</Badge>
+            <Badge variant="outline" className="border-zinc-600 text-zinc-400 text-xs">{item.content.region}</Badge>
+          </div>
+        </div>
+      )}
+      <Textarea
+        placeholder="Rejection reason..."
+        value={rejectReason}
+        onChange={(e) => onRejectReasonChange(e.target.value)}
+        className="bg-zinc-900/50 border-zinc-700 mb-3"
+      />
+      <div className="flex gap-2">
+        <Button onClick={onApprove} className="bg-green-600 hover:bg-green-500">
+          <Check className="w-4 h-4 mr-1" />
+          Approve
+        </Button>
+        <Button onClick={onReject} variant="destructive" disabled={!rejectReason.trim()}>
+          <X className="w-4 h-4 mr-1" />
+          Reject
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function UserRow({
+  user,
+  onRoleChange,
+  onSuspend,
+  onDelete,
+  selectedUserId,
+  newRole,
+  onUpdateRole,
+  onCancelRole,
+}: {
+  user: any;
+  onRoleChange: (role: string) => void;
+  onSuspend: () => void;
+  onDelete: () => void;
+  selectedUserId: string | null;
+  newRole: string;
+  onUpdateRole: () => void;
+  onCancelRole: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-4 p-3 bg-zinc-800/50 rounded-xl">
+      <Avatar className="w-10 h-10">
+        <AvatarImage src={user.avatarUrl} />
+        <AvatarFallback className="bg-zinc-700">{user.name?.charAt(0) || "?"}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="font-bold text-white truncate">{user.name}</p>
+          {user.isVerified && <Badge className="bg-amber-500/20 text-amber-500 text-xs">Verified</Badge>}
+          {user.isSuspended && <Badge variant="destructive" className="text-xs">Suspended</Badge>}
+        </div>
+        <p className="text-zinc-500 text-sm truncate">{user.email}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        {selectedUserId === user._id ? (
+          <>
+            <Select value={newRole} onValueChange={onRoleChange}>
+              <SelectTrigger className="w-[140px] bg-zinc-900/50 border-zinc-700">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-zinc-800">
+                <SelectItem value="user">User</SelectItem>
+                <SelectItem value="moderator">Moderator</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={onUpdateRole} size="sm" className="bg-amber-500 hover:bg-amber-400 text-black">
+              Save
+            </Button>
+            <Button onClick={onCancelRole} size="sm" variant="ghost">
+              Cancel
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button onClick={() => onRoleChange(user.role || "user")} variant="outline" size="sm" className="border-zinc-600">
+              <Shield className="w-4 h-4 mr-1" />
+              {user.role || "User"}
+            </Button>
+            <Button onClick={onSuspend} variant="ghost" className={user.isSuspended ? "text-green-500" : "text-red-500"}>
+              {user.isSuspended ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+            </Button>
+            <Button onClick={onDelete} variant="ghost" className="text-red-600 hover:text-red-500">
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
