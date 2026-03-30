@@ -22,7 +22,8 @@ import {
   Flame,
   AlertCircle,
   Download,
-  FileText
+  FileText,
+  Megaphone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +48,8 @@ import {
   useAddHottestArtist,
   useRemoveHottestArtist,
   useClearHottestArtists,
+  useAnnouncements,
+  useCreateAnnouncement,
 } from "@/hooks/api";
 import { toast } from "sonner";
 import { Id } from "convex/_generated/dataModel";
@@ -71,12 +74,18 @@ export default function Admin() {
   const [newRole, setNewRole] = useState<string>("");
   const [hottestSearch, setHottestSearch] = useState("");
   const [showAddHottest, setShowAddHottest] = useState(false);
+  const [announcementTitle, setAnnouncementTitle] = useState("");
+  const [announcementContent, setAnnouncementContent] = useState("");
+  const [announcementType, setAnnouncementType] = useState<"announcement" | "update" | "whats_new">("announcement");
+  const [isPinned, setIsPinned] = useState(true);
 
   const moderationLogs = useModerationLogs(100, true);
   const hottestArtistsAdmin = useAllHottestArtistsAdmin();
   const addHottestArtist = useAddHottestArtist();
   const removeHottestArtist = useRemoveHottestArtist();
   const clearHottestArtists = useClearHottestArtists();
+  const { announcements } = useAnnouncements();
+  const createAnnouncement = useCreateAnnouncement();
 
   const isAdmin =
     (adminAccess?.isAdmin ?? false) ||
@@ -249,6 +258,28 @@ export default function Admin() {
     }
   };
 
+  const handleCreateAnnouncement = async () => {
+    if (!user || !announcementTitle.trim() || !announcementContent.trim()) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    try {
+      await createAnnouncement({
+        authorId: user._id,
+        title: announcementTitle,
+        content: announcementContent,
+        type: announcementType,
+        isPinned,
+      });
+      toast.success("Announcement created!");
+      setAnnouncementTitle("");
+      setAnnouncementContent("");
+      setIsPinned(true);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   if (adminAccess === undefined) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -311,7 +342,7 @@ export default function Admin() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 bg-zinc-900/50 rounded-xl p-1">
+        <TabsList className="grid w-full grid-cols-6 bg-zinc-900/50 rounded-xl p-1">
           <TabsTrigger value="moderation" className="rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold">
             <AlertTriangle className="w-4 h-4 mr-1" />
             Mod
@@ -325,11 +356,15 @@ export default function Admin() {
           </TabsTrigger>
           <TabsTrigger value="hottest" className="rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold">
             <Flame className="w-4 h-4 mr-1" />
-            Hottest
+            Hot
           </TabsTrigger>
           <TabsTrigger value="logs" className="rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold">
             <AlertCircle className="w-4 h-4 mr-1" />
             Logs
+          </TabsTrigger>
+          <TabsTrigger value="announcements" className="rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold">
+            <Megaphone className="w-4 h-4 mr-1" />
+            Announce
           </TabsTrigger>
           <TabsTrigger value="content" className="rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-black font-bold">
             <Music className="w-4 h-4 mr-1" />
@@ -511,6 +546,76 @@ export default function Admin() {
                 </div>
               ) : (
                 <EmptyState icon={<AlertCircle className="w-12 h-12" />} title="No Logs" description="Moderation activity will appear here" />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Announcements Tab */}
+        <TabsContent value="announcements" className="mt-6">
+          <Card className="bg-zinc-900/50 border-zinc-800 rounded-2xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <Megaphone className="w-6 h-6 text-amber-500" />
+                <span>Create Announcement</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <Input
+                  placeholder="Announcement title..."
+                  value={announcementTitle}
+                  onChange={(e) => setAnnouncementTitle(e.target.value)}
+                  className="bg-zinc-900/50 border-zinc-700"
+                />
+                <Textarea
+                  placeholder="Announcement content..."
+                  value={announcementContent}
+                  onChange={(e) => setAnnouncementContent(e.target.value)}
+                  className="bg-zinc-900/50 border-zinc-700 min-h-[100px]"
+                />
+                <div className="flex flex-wrap gap-3">
+                  <Select value={announcementType} onValueChange={(v: any) => setAnnouncementType(v)}>
+                    <SelectTrigger className="w-[180px] bg-zinc-900/50 border-zinc-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                      <SelectItem value="announcement">Announcement</SelectItem>
+                      <SelectItem value="update">Update</SelectItem>
+                      <SelectItem value="whats_new">What's New</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={() => setIsPinned(!isPinned)}
+                    variant={isPinned ? "default" : "outline"}
+                    className={isPinned ? "bg-amber-500 hover:bg-amber-400" : ""}
+                  >
+                    <Megaphone className="w-4 h-4 mr-2" />
+                    {isPinned ? "Pinned" : "Not Pinned"}
+                  </Button>
+                  <Button onClick={handleCreateAnnouncement} className="bg-amber-500 hover:bg-amber-400 text-black">
+                    <Check className="w-4 h-4 mr-2" />
+                    Publish
+                  </Button>
+                </div>
+              </div>
+
+              {announcements && announcements.length > 0 && (
+                <div className="pt-4 border-t border-zinc-800">
+                  <h4 className="text-white font-bold mb-3">Recent Announcements</h4>
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                    {announcements.slice(0, 5).map((ann: any) => (
+                      <div key={ann._id} className="p-3 bg-zinc-800/50 rounded-xl">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h5 className="font-bold text-white text-sm">{ann.title}</h5>
+                          {ann.isPinned && <Badge className="bg-amber-500/20 text-amber-500 text-[10px]">Pinned</Badge>}
+                        </div>
+                        <p className="text-zinc-500 text-xs line-clamp-2">{ann.content}</p>
+                        <p className="text-zinc-600 text-xs mt-1">{formatTimestamp(ann.createdAt)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>

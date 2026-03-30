@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import ContentCard from "@/components/ContentCard";
 import HottestSection from "@/components/HottestSection";
+import AnnouncementBanner from "@/components/AnnouncementBanner";
 import { useSpotlightFeed, useTrendingContent, useFreshFaceFeed } from "@/hooks/api";
 
 const useScrollReveal = () => {
@@ -146,6 +147,11 @@ export default function Index() {
 
       {/* Hottest Section */}
       <HottestSection />
+
+      {/* Announcements */}
+      <section className="container mx-auto px-6 py-8 relative z-10">
+        <AnnouncementBanner />
+      </section>
 
       {/* Spotlight Feed */}
       <main className="container mx-auto px-6 py-24 relative z-10">
